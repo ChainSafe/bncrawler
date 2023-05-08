@@ -1,12 +1,13 @@
 import { Op, Options, Sequelize } from "@sequelize/core"
 import { createDb, Peer } from "./db.js";
-import { Discv5, ENR, IDiscv5CreateOptions } from "@chainsafe/discv5";
+import { Discv5, ENR, ENRInput, IDiscv5CreateOptions } from "@chainsafe/discv5";
 import {Registry} from "prom-client";
 import { Counter, Histogram } from "prom-client";
 
 export type CrawlerInitOptions = {
   db: Options;
   discv5: IDiscv5CreateOptions;
+  bootEnrs: ENRInput[];
   registry: Registry;
 };
 
@@ -108,6 +109,10 @@ export class Crawler {
     const metrics = createMetrics(opts.registry);
 
     const discv5 = Discv5.create(opts.discv5);
+    for (const bootEnr of opts.bootEnrs) {
+      discv5.addEnr(bootEnr);
+    }
+
     await discv5.start();
 
     return new Crawler({
