@@ -108,6 +108,7 @@ export class Crawler {
 
     const metrics = createMetrics(opts.registry);
 
+    //const discv5 = Discv5.create({...opts.discv5, metricsRegistry: opts.registry});
     const discv5 = Discv5.create(opts.discv5);
     for (const bootEnr of opts.bootEnrs) {
       discv5.addEnr(bootEnr);

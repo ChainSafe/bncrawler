@@ -22,7 +22,7 @@ type CLIOptions = {
 const opts: CLIOptions = {
   bindAddr: '/ip4/0.0.0.0/udp/9999',
   db: {
-    dialect: 'sqlite',
+    dialect: "sqlite",
   },
   metricsPort: 9900,
 }
