@@ -1,3 +1,4 @@
+import fs from "node:fs"
 import yargs from 'yargs';
 import figlet from 'figlet';
 import { render } from './charts/screen.js';
@@ -6,10 +7,8 @@ import { createSecp256k1PeerId } from '@libp2p/peer-id-factory';
 import { SignableENR } from '@chainsafe/discv5';
 import { bootEnrs } from './bootEnrs.js';
 import { multiaddr } from '@multiformats/multiaddr';
-import { Registry } from 'prom-client';
-import http from 'node:http';
-import { CrawlerInitOptions } from './crawler/crawler.js';
 import { Options } from '@sequelize/core';
+import { fstat } from 'fs';
 
 type CLIOptions = {
   db: Options;
@@ -30,32 +29,19 @@ const opts: CLIOptions = {
 const bindAddr = multiaddr(opts.bindAddr)
 const peerId = await createSecp256k1PeerId()
 const enr = SignableENR.createFromPeerId(peerId)
-const registry = new Registry();
 
 //TODO: Show this and node crawler spinner then render charts
 const crawler =  await Crawler.init({
-  db: opts.db,
   discv5: {
     peerId,
     enr,
     multiaddr: bindAddr,
   },
   bootEnrs,
-  registry,
 });
 
 // attach crawler to globalThis for debugging purposes
-globalThis.crawler = crawler;
-
-// set up metrics server
-const server = http.createServer(async (req, res) => {
-  if (req.method === "GET" && req.url && req.url.includes("/metrics")) {
-    res.writeHead(200, {"content-type": "text/plain"}).end(await crawler.scrapeMetrics());
-  } else {
-    res.writeHead(404).end();
-  }
-})
-server.listen(opts.metricsPort)
+(globalThis as any).crawler = crawler;
 
 // figlet('Beacon Node Crawler', (err, data) => {
 //   if (err) {
@@ -67,4 +53,17 @@ server.listen(opts.metricsPort)
 // });
 
 
-render()
+//render()
+
+process.addListener("SIGHUP", () => {
+  const filename = `enr-dump-${new Date().toISOString()}`
+  const stream = fs.createWriteStream(filename)
+  console.log(`writing to ${filename}`);
+  for (const {enr} of crawler.discovered.values()) {
+    stream.write(enr.encodeTxt() + "\n")
+  }
+  stream.end()
+  console.log(`writing to ${filename} finished`);
+})
+
+process.addListener("SIGINT", () => crawler.close())
