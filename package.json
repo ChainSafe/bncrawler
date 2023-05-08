@@ -25,9 +25,11 @@
   },
   "dependencies": {
     "@chainsafe/discv5": "^3.0.0",
+    "@libp2p/peer-id-factory": "^2.0.3",
     "@lodestar/config": "^1.7.2",
     "@lodestar/params": "^1.7.2",
     "@lodestar/types": "^1.7.2",
+    "@multiformats/multiaddr": "^12.1.2",
     "@sequelize/core": "^7.0.0-alpha.23",
     "@types/node": "^20.1.0",
     "blessed": "^0.1.81",
