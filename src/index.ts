@@ -44,6 +44,9 @@ const crawler =  await Crawler.init({
   registry,
 });
 
+// attach crawler to globalThis for debugging purposes
+globalThis.crawler = crawler;
+
 // set up metrics server
 const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && req.url && req.url.includes("/metrics")) {
