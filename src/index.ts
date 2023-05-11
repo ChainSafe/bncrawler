@@ -5,10 +5,11 @@ import { render } from './charts/screen.js';
 import { Crawler } from './crawler/crawler.js';
 import { createSecp256k1PeerId } from '@libp2p/peer-id-factory';
 import { SignableENR } from '@chainsafe/discv5';
-import { bootEnrs } from './bootEnrs.js';
 import { multiaddr } from '@multiformats/multiaddr';
 import { Options } from '@sequelize/core';
 import { fstat } from 'fs';
+import { ssz } from "@lodestar/types";
+import { bootEnrs } from "./bootEnrs.js";
 
 type CLIOptions = {
   db: Options;
@@ -29,6 +30,15 @@ const opts: CLIOptions = {
 const bindAddr = multiaddr(opts.bindAddr)
 const peerId = await createSecp256k1PeerId()
 const enr = SignableENR.createFromPeerId(peerId)
+
+// let bootRecords: string[] = []
+const filename = `enr-dump-${new Date().toISOString().slice(0, 13)}`
+
+// try {
+//   bootRecords = fs.readFileSync(filename, 'utf8').split('\n')
+// } catch (err) {
+//   console.error("error reading file", err)
+// }
 
 //TODO: Show this and node crawler spinner then render charts
 const crawler =  await Crawler.init({
@@ -55,8 +65,31 @@ const crawler =  await Crawler.init({
 
 //render()
 
-process.addListener("SIGHUP", () => {
-  const filename = `enr-dump-${new Date().toISOString()}`
+
+setInterval(() => {
+  let beaconCount = 0
+
+  console.log('discovered peers:', crawler.discovered.size)
+  crawler.discovered.forEach((enr) => {
+      const eth2Entry = enr.enr.kvs.get("eth2")
+      const enrForkID = eth2Entry ? ssz.phase0.ENRForkID.deserialize(eth2Entry) : undefined
+      const forkDigest = enrForkID?.forkDigest
+      const firstFourBytes = forkDigest?.subarray(0, 4);
+
+      if (firstFourBytes !== undefined) {
+          const hexString = Array.from(firstFourBytes)
+            .map((byte) => byte.toString(16).padStart(2, "0"))
+            .join("");
+          if (hexString === 'bba4da96') {
+            beaconCount++
+          }
+      }
+
+  })
+  console.log('mainnet beacon nodes:', beaconCount)
+}, 2000)
+
+process.addListener("SIGINT", () => {
   const stream = fs.createWriteStream(filename)
   console.log(`writing to ${filename}`);
   for (const {enr} of crawler.discovered.values()) {
@@ -64,6 +97,5 @@ process.addListener("SIGHUP", () => {
   }
   stream.end()
   console.log(`writing to ${filename} finished`);
+  crawler.close()
 })
-
-process.addListener("SIGINT", () => crawler.close())

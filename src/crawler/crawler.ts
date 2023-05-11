@@ -26,6 +26,7 @@ export type ENRValue = {
 
 export class Crawler {
   public discovered: Map<string, ENRValue>;
+  public ips: string[];
   private opts: CrawlerInitOptions;
   private discv5: Discv5;
   private pingTimer: NodeJS.Timer;
@@ -35,8 +36,9 @@ export class Crawler {
     this.opts = modules.opts;
     this.discv5 = modules.discv5;
     this.discovered = new Map();
+    this.ips = [];
     this.discv5.on("discovered", this.onDiscovered);
-  
+
     this.crawl().catch((e) => console.error("error crawling", e))
 
     this.pingTimer = setInterval(() => this.pingDiscoveredPeers(), PING_INTERVAL);
@@ -62,7 +64,15 @@ export class Crawler {
   }
 
   onDiscovered = (enr: ENR) => {
-    this.discovered.set(enr.nodeId, {enr, lastUpdate: 0});
+    if (enr.ip) {
+      // Dedupe Ips
+      if (!this.ips.includes(enr.ip)) {
+        this.ips.push(enr.ip);
+        this.discovered.set(enr.nodeId, {enr, lastUpdate: 0});
+      }
+    } else {
+      console.log("discovered peer without ip", enr.nodeId);
+    }
   };
 
   async pingDiscoveredPeers() {

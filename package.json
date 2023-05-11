@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "start:dev": "nodemon --esm src/index.ts",
-    "start": "node lib/index.js"
+    "start": "ts-node --esm src/index.ts"
   },
   "devDependencies": {
     "@types/blessed": "^0.1.21",
